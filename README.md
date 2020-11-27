@@ -36,7 +36,8 @@ Tela na qual iremos jogar. Nela mostraremos a nave e os asteroides.
 
 * Nave do jogador:
     * Deve se mexer na horizontal e na vertical, respeitando os limites da tela;
-    * Dispara projéteis na vertical com um intervalo fixo de tempo; 
+    * Dispara projéteis na vertical com um intervalo fixo de tempo;
+    * Possui um contador de pontos na tela; 
     * Possui um medidor de integridade na tela:
         * Caso colida com um asteróide, a nave perde integridade;
         * Caso a integridade atinja 0 ou menos, voltar para o menu principal.
