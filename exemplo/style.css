@@ -1,0 +1,28 @@
+.nomargin
+{
+    margin: 0 0;
+}
+
+.outline
+{
+    outline: 1px solid gray;
+}
+
+.container
+{
+    display: flex;
+    flex-direction: column;
+    padding: 16px 16px;
+}
+
+.item
+{
+    width: auto;
+    margin: 8px 8px;
+    padding: 8px 8px;
+}
+
+.center
+{
+    text-align: center;
+}
