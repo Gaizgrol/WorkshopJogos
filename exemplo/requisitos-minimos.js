@@ -376,6 +376,21 @@ class Menu extends OptionSelect
                 Game.createObject( new Credits() );
             }),
         ]);
+
+
+        let hs = localStorage.getItem("highscore");
+
+        this.highscore = hs ?? 0;
+    }
+
+    draw()
+    {
+        // Desenha normalmente
+        super.draw();
+
+        // Desenha o link do projeto
+        Game.render.font = "12px Arial";
+        Game.render.fillText( `Melhor pontuação: ${this.highscore}`, 30, 280 );
     }
 }
 
@@ -428,8 +443,8 @@ class Space extends GameObject
     {
         let asteroidX = Math.round( Math.random() * Game.canvas.width );
         let asteroidSize = Math.round( 1 + Math.random() * 3 );
-        let vx = Math.round( -3 + Math.random() * 6 );
-        let vy = Math.round( 1 + Math.random() * 2 );
+        let vx = Math.round( ( -3 + Math.random() * 6 ) / 2 );
+        let vy = Math.round( ( 1 + Math.random() * 2 ) / 2 );
         Game.createObject( new Asteroid( asteroidX, 0, vx, vy, asteroidSize ) );
     }
 
@@ -463,7 +478,7 @@ class Projectile extends Collider
     constructor( x, y, width, height, owner )
     {
         super( x, y, width, height, "Projectile" );
-        this.speed = 5;
+        this.speed = 6;
         this.owner = owner;
     }
 
@@ -481,10 +496,7 @@ class Projectile extends Collider
     onCollision( other )
     {
         if ( other.tag == "Asteroid" )
-        {
-            this.owner.score++;
             Game.destroyObject( this._id );
-        }
     }
 
     step()
@@ -511,7 +523,7 @@ class Spaceship extends GameObject
         this.score = 0;
 
         // Intervalo máximo entre os disparos
-        this._shotInterval = 20;
+        this._shotInterval = 15;
         this._cooldown = 0;
 
         // Cria dois colisores, já que a nave é irregular (composta por dois retângulos)
@@ -618,6 +630,11 @@ class Spaceship extends GameObject
     {
         if ( this.integrity <= 0 )
         {
+            // Salva a melhor pontuação
+            let hs = localStorage.getItem( "highscore" ) ?? 0;
+            if ( this.score >= hs )
+                localStorage.setItem( "highscore", this.score );
+
             Game.clear();
             Game.createObject( new Menu() );
         }
@@ -657,6 +674,9 @@ class Asteroid extends Collider
         this.vx = vx;
         this.vy = vy;
         this.size = size;
+        this.resistance = size;
+        this.maxDamageFrameTime = 8;
+        this.cooldown = 0;
     }
 
     _isOutside()
@@ -666,13 +686,44 @@ class Asteroid extends Collider
     
     draw()
     {
-        Game.render.fillStyle = "#007FFF";
-        Game.render.fillRect( this.x, this.y, this.size*8, this.size*8 );
+        if ( this.resistance > 0 )
+        {
+            Game.render.fillStyle = ( this.cooldown == 0 ) ? "#007FFF" : "#FF00FF";
+            Game.render.fillRect( this.x, this.y, this.size*8, this.size*8 );
+        }
     }
 
     onCollision( other )
     {
-        if ( other.tag == "Player" || other.tag == "Projectile" )
+        if ( other.tag == "Projectile" )
+        {
+            this.resistance--;
+
+            this.cooldown = this.maxDamageFrameTime;
+            
+            if ( this.resistance <= 0 )
+            {
+                let l = Math.trunc( this.size / 2 );
+                for ( let i = 0; i < 4; i++ )
+                {
+                    if ( l >= 1 )
+                    {
+                        let vx = -2 + Math.random() * 4;
+                        vx = Math.sign( vx ) * Math.min( 0.25, Math.abs(vx) );
+                        let vy = -2 + Math.random() * 4;
+                        vy = Math.sign( vy ) * Math.min( 0.25, Math.abs(vy) );
+
+                        let px = i % 2 ? -1 : 1;
+                        let py = i > 2 ? -1 : 1;
+
+                        Game.createObject( new Asteroid( this.x+px*l*4, this.y+py*l*4, this.vx+vx, this.vy+vy, l ) );
+                    }
+                }
+                other.owner.score++;
+            }
+        }
+
+        if ( other.tag == "Player" )
             Game.destroyObject( this._id );
     }
 
@@ -682,8 +733,11 @@ class Asteroid extends Collider
         this.y += this.vy;
 
         // Teste de limites
-        if ( this._isOutside() )
+        if ( this._isOutside() || this.resistance <= 0 )
             Game.destroyObject( this._id );
+
+        if ( this.cooldown > 0 )
+            this.cooldown--;
     }
 }
 
