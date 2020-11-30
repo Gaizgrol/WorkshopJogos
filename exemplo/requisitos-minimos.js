@@ -401,7 +401,9 @@ class Credits extends OptionSelect
     {
         super( "Créditos", 24, [
             // Desenvolvedor do jogo
-            new Button( "Gabriel Izoton: github.com/Gaizgrol", 14, 30, 128 ),
+            new Button( "Gabriel Izoton: github.com/Gaizgrol", 14, 30, 128, () => {
+                window.open( "https://github.com/Gaizgrol" );
+            }),
 
             // Ao clicar em voltar, vai para o menu
             new Button( "< Voltar", 14, 30, 160, () => {
