@@ -36,6 +36,8 @@ class Game
 
     // Controla a execução
     static _running = false;
+    // Controla o tempo entre um quadro e outro
+    static _lastFrame = 0;
 
     // Getter que retorna uma cópia das teclas de input para evitar
     // alterações indesejadas
@@ -127,6 +129,24 @@ class Game
         Game._objects.forEach( obj => obj.draw() );
     }
 
+    // Cuida da atualização de tempo entre os quadros do jogo
+    static _handleDelta()
+    {
+        let delta = 16;
+        
+        // Calcula a diferença de tempo
+        if ( Game._lastFrame > 0 )
+        {
+            let lastFrame = Game._lastFrame;
+            let now = Date.now();
+            
+            delta = now - lastFrame;
+        }
+        Game._lastFrame = Date.now();
+
+        return delta;
+    }
+
     // Atualiza as teclas clicadas (dispara uma vez por clique)
     static _handleKeyClicked()
     {
@@ -167,21 +187,27 @@ class Game
     {
         if ( Game._running )
         {
+            let delta = Game._handleDelta();
+
             Game._createObjects();
-            Game._step();
+            Game._step( delta );
             Game._checkCollisions();
             Game._draw();
             Game._destroyObjects();
 
             requestAnimationFrame( Game._loop );
         }
+        else
+        {
+            Game._lastFrame = 0;
+        }
     }
 
     // Atualiza os objetos ativos
-    static _step()
+    static _step( delta )
     {
         Game._handleKeyClicked();
-        Game._objects.forEach( obj => obj.step() );
+        Game._objects.forEach( obj => obj.step( delta ) );
     }
 
     // Limpa o jogo
@@ -257,7 +283,7 @@ class GameObject
     }
 
     draw() {}
-    step() {}
+    step( delta ) {}
     destroy() {}
 }
 
