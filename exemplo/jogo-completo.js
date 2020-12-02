@@ -551,7 +551,7 @@ class Spaceship extends GameObject
         this.score = 0;
 
         // Intervalo máximo entre os disparos
-        this._shotInterval = 15;
+        this._shotInterval = 10;
         this._cooldown = 0;
 
         // Cria dois colisores, já que a nave é irregular (composta por dois retângulos)
@@ -631,10 +631,13 @@ class Spaceship extends GameObject
     {
         if ( this._cooldown <= 0 )
         {
-            // Reinicia o contador
-            this._cooldown = this._shotInterval;
-            // Cria um novo projétil
-            Game.createObject( new Projectile( this.x, this.y - 8, 8, 12, this ) );
+            if ( Game.keyPressed[" "] )
+            {
+                // Reinicia o contador
+                this._cooldown = this._shotInterval;
+                // Cria um novo projétil
+                Game.createObject( new Projectile( this.x, this.y - 8, 8, 12, this ) );
+            }
         }
         else
             this._cooldown--;
