@@ -144,7 +144,7 @@ class Game
         }
         Game._lastFrame = Date.now();
 
-        return delta;
+        return delta / 1000;
     }
 
     // Atualiza as teclas clicadas (dispara uma vez por clique)
@@ -460,7 +460,7 @@ class Space extends GameObject
         super();
 
         // Maior intevalo possível entre criação de asteroides
-        this._maxFramesUntilSpawn = 40;
+        this._maxFramesUntilSpawn = 666;
         this._framesLeft = 0;
 
         Game.createObject( new Spaceship( Game.canvas.width/2, Game.canvas.height/2 ) );
@@ -471,8 +471,8 @@ class Space extends GameObject
     {
         let asteroidX = Math.round( Math.random() * Game.canvas.width );
         let asteroidSize = Math.round( 1 + Math.random() * 3 );
-        let vx = Math.round( ( -3 + Math.random() * 6 ) / 2 );
-        let vy = Math.round( ( 1 + Math.random() * 2 ) / 2 );
+        let vx = Math.round( ( -180 + Math.random() * 360 ) / 2 );
+        let vy = Math.round( ( 60 + Math.random() * 120 ) / 2 );
         Game.createObject( new Asteroid( asteroidX, 0, vx, vy, asteroidSize ) );
     }
 
@@ -484,7 +484,7 @@ class Space extends GameObject
         this._framesLeft = baseFrames + Math.round( Math.random() * remainingFrames );
     }
 
-    step()
+    step( deltaTime )
     {
         if ( this._framesLeft <= 0 )
         {
@@ -493,7 +493,7 @@ class Space extends GameObject
         }
         else
             // Diminui o contador
-            this._framesLeft--;
+            this._framesLeft -= deltaTime * 1000;
     }
 }
 
@@ -506,7 +506,7 @@ class Projectile extends Collider
     constructor( x, y, width, height, owner )
     {
         super( x, y, width, height, "Projectile" );
-        this.speed = 6;
+        this.speed = 360;
         this.owner = owner;
     }
 
@@ -527,10 +527,10 @@ class Projectile extends Collider
             Game.destroyObject( this._id );
     }
 
-    step()
+    step( deltaTime )
     {
         // Move
-        this.y -= this.speed;
+        this.y -= this.speed * deltaTime;
 
         // Teste de limites
         if ( this._isOutside() )
@@ -547,11 +547,11 @@ class Spaceship extends GameObject
 
         // "Vida" da nave, velocidade e pontuação inicial
         this.integrity = 100;
-        this.speed = 3;
+        this.speed = 180;
         this.score = 0;
 
         // Intervalo máximo entre os disparos
-        this._shotInterval = 10;
+        this._shotInterval = 166;
         this._cooldown = 0;
 
         // Cria dois colisores, já que a nave é irregular (composta por dois retângulos)
@@ -575,7 +575,7 @@ class Spaceship extends GameObject
         if ( other.tag == "Asteroid" )
         {
             this.integrity -= other.size*8;
-            this.score++;
+            this.increaseScore();
         }
     }
 
@@ -614,69 +614,21 @@ class Spaceship extends GameObject
         return ( this.x < 0 || this.x > Game.canvas.width || this.y < 0 || this.y > Game.canvas.height );
     }
 
-    _move()
+    _move( deltaTime )
     {
-        // Atualização do jogador
-        if ( Game.keyPressed["ArrowUp"] == true )
-            this.y -= this.speed;
-        if ( Game.keyPressed["ArrowDown"] == true )
-            this.y += this.speed;
-        if ( Game.keyPressed["ArrowLeft"] == true )
-            this.x -= this.speed;
-        if ( Game.keyPressed["ArrowRight"] == true )
-            this.x += this.speed;
-    }
-
-    _shoot()
-    {
-        if ( this._cooldown <= 0 )
-        {
-            if ( Game.keyPressed[" "] )
-            {
-                // Reinicia o contador
-                this._cooldown = this._shotInterval;
-                // Cria um novo projétil
-                Game.createObject( new Projectile( this.x, this.y - 8, 8, 12, this ) );
-            }
-        }
-        else
-            this._cooldown--;
-    }
-
-    destroy()
-    {
-        // Destrói os colisores quando for destruído
-        for ( let c of this._colliders )
-            Game.destroyObject( c.collider._id );
-    }
-    
-    draw()
-    {
-        this._drawShip();
-        this._drawIntegrity();
-        this._drawScore();
-    }
-
-    step()
-    {
-        if ( this.integrity <= 0 )
-        {
-            // Salva a melhor pontuação
-            let hs = localStorage.getItem( "highscore" ) ?? 0;
-            if ( this.score >= hs )
-                localStorage.setItem( "highscore", this.score );
-
-            Game.clear();
-            Game.createObject( new Menu() );
-        }
-
-        this._shoot();
-
         // Última posição
         let lastX = this.x;
         let lastY = this.y;
 
-        this._move();
+        // Atualização do jogador
+        if ( Game.keyPressed["ArrowUp"] == true )
+            this.y -= this.speed * deltaTime;
+        if ( Game.keyPressed["ArrowDown"] == true )
+            this.y += this.speed * deltaTime;
+        if ( Game.keyPressed["ArrowLeft"] == true )
+            this.x -= this.speed * deltaTime;
+        if ( Game.keyPressed["ArrowRight"] == true )
+            this.x += this.speed * deltaTime;
 
         // Teste de limites
         if ( this._isOutside() )
@@ -694,6 +646,64 @@ class Spaceship extends GameObject
             }
         }
     }
+
+    _saveScore()
+    {        
+        // Salva a melhor pontuação
+        let hs = localStorage.getItem( "highscore" ) ?? 0;
+        if ( this.score >= hs )
+            localStorage.setItem( "highscore", this.score );
+    }
+
+    _shoot( deltaTime )
+    {
+        if ( this._cooldown <= 0 )
+        {
+            if ( Game.keyPressed[" "] )
+            {
+                // Reinicia o contador
+                this._cooldown = this._shotInterval;
+                // Cria um novo projétil
+                Game.createObject( new Projectile( this.x, this.y - 8, 8, 12, this ) );
+            }
+        }
+        else
+            this._cooldown -= deltaTime * 1000;
+    }
+
+    destroy()
+    {
+        // Destrói os colisores quando for destruído
+        for ( let c of this._colliders )
+            Game.destroyObject( c.collider._id );
+    }
+    
+    draw()
+    {
+        // Desenha tudo relacionado à nave
+        this._drawShip();
+        this._drawIntegrity();
+        this._drawScore();
+    }
+
+    increaseScore()
+    {
+        this.score++;
+    }
+
+    step( deltaTime )
+    {
+        // Testa se a nave ainda está inteira
+        if ( this.integrity <= 0 )
+        {
+            this._saveScore();
+            Game.clear();
+            Game.createObject( new Menu() );
+        }
+
+        this._move( deltaTime );
+        this._shoot( deltaTime );
+    }
 }
 
 // Asteroide
@@ -706,8 +716,32 @@ class Asteroid extends Collider
         this.vy = vy;
         this.size = size;
         this.resistance = size;
-        this.maxDamageFrameTime = 8;
+        this.maxDamageFrameTime = 130;
         this.cooldown = 0;
+    }
+
+    _fragment()
+    {
+        // Tamanho dos novos asteroides
+        let l = Math.trunc( this.size / 2 );
+        
+        for ( let i = 0; i < 4; i++ )
+        {
+            if ( l >= 1 )
+            {
+                // Velocidade do novo asteroide
+                let vx = -120 + Math.random() * 240;
+                vx = Math.sign( vx ) * Math.min( 15, Math.abs(vx) );
+                let vy = -120 + Math.random() * 240;
+                vy = Math.sign( vy ) * Math.min( 15, Math.abs(vy) );
+
+                // Posição do novo asteroide
+                let px = i % 2 ? -1 : 1;
+                let py = i > 2 ? -1 : 1;
+
+                Game.createObject( new Asteroid( this.x+px*l*4, this.y+py*l*4, this.vx+vx, this.vy+vy, l ) );
+            }
+        }
     }
 
     _isOutside()
@@ -719,7 +753,7 @@ class Asteroid extends Collider
     {
         if ( this.resistance > 0 )
         {
-            Game.render.fillStyle = ( this.cooldown == 0 ) ? "#007FFF" : "#FF00FF";
+            Game.render.fillStyle = ( this.cooldown <= 0 ) ? "#007FFF" : "#FF00FF";
             Game.render.fillRect( this.x, this.y, this.size*8, this.size*8 );
         }
     }
@@ -728,47 +762,35 @@ class Asteroid extends Collider
     {
         if ( other.tag == "Projectile" )
         {
+            // Danifica o asteroide
             this.resistance--;
-
+            // "Pisca" o asteroide
             this.cooldown = this.maxDamageFrameTime;
             
+            // Testa se foi destruído
             if ( this.resistance <= 0 )
             {
-                let l = Math.trunc( this.size / 2 );
-                for ( let i = 0; i < 4; i++ )
-                {
-                    if ( l >= 1 )
-                    {
-                        let vx = -2 + Math.random() * 4;
-                        vx = Math.sign( vx ) * Math.min( 0.25, Math.abs(vx) );
-                        let vy = -2 + Math.random() * 4;
-                        vy = Math.sign( vy ) * Math.min( 0.25, Math.abs(vy) );
-
-                        let px = i % 2 ? -1 : 1;
-                        let py = i > 2 ? -1 : 1;
-
-                        Game.createObject( new Asteroid( this.x+px*l*4, this.y+py*l*4, this.vx+vx, this.vy+vy, l ) );
-                    }
-                }
-                other.owner.score++;
+                this._fragment();
+                other.owner.increaseScore();
             }
         }
 
+        // Na colisão com o jogador se destrói instantaneamente
         if ( other.tag == "Player" )
             Game.destroyObject( this._id );
     }
 
-    step()
+    step( deltaTime )
     {
-        this.x += this.vx;
-        this.y += this.vy;
+        this.x += this.vx * deltaTime;
+        this.y += this.vy * deltaTime;
 
         // Teste de limites
         if ( this._isOutside() || this.resistance <= 0 )
             Game.destroyObject( this._id );
 
         if ( this.cooldown > 0 )
-            this.cooldown--;
+            this.cooldown -= deltaTime * 1000;
     }
 }
 
