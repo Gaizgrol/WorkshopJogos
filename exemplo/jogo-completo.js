@@ -361,7 +361,7 @@ class OptionSelect extends GameObject
         // Título
         Game.render.font = `${this._size}px Arial`;
         Game.render.fillStyle = "#FFF";
-        Game.render.fillText( "Salve", 30, 60 );
+        Game.render.fillText( this._title, 30, 60 );
 
         // Botões
         this._buttons.forEach( button => button.draw() );
@@ -389,9 +389,9 @@ class OptionSelect extends GameObject
 // Menu principal
 class Menu extends OptionSelect
 {
-    constructor()
+    constructor( selected = 0 )
     {
-        super( "Menu", 32, [
+        super( "Salve", 32, [
             // Ao clicar em jogar, vai para a fase do espaço
             new Button( "Jogar", 14, 30, 128, () => {
                 Game.clear();
@@ -407,40 +407,17 @@ class Menu extends OptionSelect
             // Ao clicar em créditos, vai para a fase dos créditos
             new Button( "Instruções", 14, 30, 192, () => {
                 Game.clear();
-                Game.createObject( new Credits() );
+                Game.createObject( new Tutorial() );
             }),
 
             // Ao clicar em créditos, vai para a fase dos créditos
             new Button( "Placar", 14, 30, 224, () => {
                 Game.clear();
-                Game.createObject( new Credits() );
+                Game.createObject( new Highscores() );
             }),
         ]);
-    }
-}
 
-// Créditos do jogos
-class Credits extends OptionSelect
-{
-    constructor()
-    {
-        super( "Créditos", 24, [
-            // Desenvolvedor do jogo
-            new Button( "Gabriel Izoton: github.com/Gaizgrol", 14, 30, 128, () => {
-                window.open( "https://github.com/Gaizgrol" );
-            }),
-
-            // Link do projeto
-            new Button( "github.com/Gaizgrol/WorkshopJogos", 12, 30, 160, () => {
-                window.open( "https://github.com/Gaizgrol/WorkshopJogos" );
-            }, "#0F0"),
-
-            // Ao clicar em voltar, vai para o menu
-            new Button( "< Voltar", 14, 30, 224, () => {
-                Game.clear();
-                Game.createObject( new Menu() );
-            }),
-        ]);
+        this._selectedButton = selected;
     }
 }
 
@@ -486,6 +463,81 @@ class Space extends GameObject
         else
             // Diminui o contador
             this._framesLeft -= deltaTime * 1000;
+    }
+}
+
+// Créditos do jogos
+class Credits extends OptionSelect
+{
+    constructor()
+    {
+        super( "Créditos", 24, [
+            // Desenvolvedor do jogo
+            new Button( "Gabriel Izoton: github.com/Gaizgrol", 14, 30, 128, () => {
+                window.open( "https://github.com/Gaizgrol" );
+            }),
+
+            // Link do projeto
+            new Button( "github.com/Gaizgrol/WorkshopJogos", 12, 30, 160, () => {
+                window.open( "https://github.com/Gaizgrol/WorkshopJogos" );
+            }, "#0F0"),
+
+            // Ao clicar em voltar, vai para o menu
+            new Button( "< Voltar", 14, 30, 224, () => {
+                Game.clear();
+                Game.createObject( new Menu(1) );
+            }),
+        ]);
+    }
+}
+
+// Créditos do jogos
+class Tutorial extends OptionSelect
+{
+    constructor()
+    {
+        super( "Instruções", 24, [
+            // Desenvolvedor do jogo
+            new Button( "Gabriel Izoton: github.com/Gaizgrol", 14, 30, 128, () => {
+                window.open( "https://github.com/Gaizgrol" );
+            }),
+
+            // Link do projeto
+            new Button( "github.com/Gaizgrol/WorkshopJogos", 12, 30, 160, () => {
+                window.open( "https://github.com/Gaizgrol/WorkshopJogos" );
+            }, "#0F0"),
+
+            // Ao clicar em voltar, vai para o menu
+            new Button( "< Voltar", 14, 30, 224, () => {
+                Game.clear();
+                Game.createObject( new Menu(2) );
+            }),
+        ]);
+    }
+}
+
+// Créditos do jogos
+class Highscores extends OptionSelect
+{
+    constructor()
+    {
+        super( "Placar", 24, [
+            // Desenvolvedor do jogo
+            new Button( "Gabriel Izoton: github.com/Gaizgrol", 14, 30, 128, () => {
+                window.open( "https://github.com/Gaizgrol" );
+            }),
+
+            // Link do projeto
+            new Button( "github.com/Gaizgrol/WorkshopJogos", 12, 30, 160, () => {
+                window.open( "https://github.com/Gaizgrol/WorkshopJogos" );
+            }, "#0F0"),
+
+            // Ao clicar em voltar, vai para o menu
+            new Button( "< Voltar", 14, 30, 224, () => {
+                Game.clear();
+                Game.createObject( new Menu(3) );
+            }),
+        ]);
     }
 }
 
