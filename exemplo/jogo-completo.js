@@ -374,9 +374,9 @@ class OptionSelect extends GameObject
     // Seleciona as opções
     step()
     {
-        if ( Game.keyClicked["ArrowUp"] )
+        if ( Game.keyClicked["ArrowUp"] || Game.keyClicked["ArrowLeft"] )
             this._selectedButton = ( this._buttons.length + this._selectedButton - 1 ) % this._buttons.length;
-        if ( Game.keyClicked["ArrowDown"] )
+        if ( Game.keyClicked["ArrowDown"] || Game.keyClicked["ArrowRight"] )
             this._selectedButton = ( this._selectedButton + 1 ) % this._buttons.length;
         if ( Game.keyClicked[" "] )
             this._buttons[ this._selectedButton ].select();
@@ -405,9 +405,9 @@ class Menu extends OptionSelect
             }),
 
             // Ao clicar em créditos, vai para a fase dos créditos
-            new Button( "Instruções", 14, 30, 192, () => {
+            new Button( "Ajuda", 14, 30, 192, () => {
                 Game.clear();
-                Game.createObject( new Tutorial() );
+                Game.createObject( new Help() );
             }),
 
             // Ao clicar em créditos, vai para a fase dos créditos
@@ -473,46 +473,161 @@ class Credits extends OptionSelect
     {
         super( "Créditos", 24, [
             // Desenvolvedor do jogo
-            new Button( "Gabriel Izoton: github.com/Gaizgrol", 14, 30, 128, () => {
+            new Button( "Gabriel Izoton", 14, 30, 128, () => {
                 window.open( "https://github.com/Gaizgrol" );
             }),
 
             // Link do projeto
-            new Button( "github.com/Gaizgrol/WorkshopJogos", 12, 30, 160, () => {
+            new Button( "https://github.com/Gaizgrol/WorkshopJogos", 12, 30, 224, () => {
                 window.open( "https://github.com/Gaizgrol/WorkshopJogos" );
             }, "#0F0"),
 
             // Ao clicar em voltar, vai para o menu
-            new Button( "< Voltar", 14, 30, 224, () => {
+            new Button( "< Voltar", 14, 30, 256, () => {
                 Game.clear();
                 Game.createObject( new Menu(1) );
             }),
         ]);
     }
+
+    draw()
+    {
+        super.draw();
+
+        // Título do conteúdo
+        Game.render.font = "18px Arial";
+        Game.render.fillStyle = "#FF0"
+        Game.render.fillText( "Desenvolvedores:", 30, 96 )
+    }
 }
 
 // Créditos do jogos
-class Tutorial extends OptionSelect
+class Help extends OptionSelect
 {
     constructor()
     {
-        super( "Instruções", 24, [
-            // Desenvolvedor do jogo
-            new Button( "Gabriel Izoton: github.com/Gaizgrol", 14, 30, 128, () => {
-                window.open( "https://github.com/Gaizgrol" );
-            }),
+        super( "Ajuda", 24, [
+            // Volta o texto
+            new Button( "Anterior", 12, 30, 224, () => {
+                let pages = this._getTotalPages();
+                this._page = ( pages + this._page - 1 ) % pages;
+            }, "#0F0"),
 
-            // Link do projeto
-            new Button( "github.com/Gaizgrol/WorkshopJogos", 12, 30, 160, () => {
-                window.open( "https://github.com/Gaizgrol/WorkshopJogos" );
+            // Avança o texto
+            new Button( "Próximo", 12, 224, 224, () => {
+                let pages = this._getTotalPages();
+                this._page = ( this._page + 1 ) % pages;
             }, "#0F0"),
 
             // Ao clicar em voltar, vai para o menu
-            new Button( "< Voltar", 14, 30, 224, () => {
+            new Button( "< Voltar", 14, 30, 256, () => {
                 Game.clear();
                 Game.createObject( new Menu(2) );
             }),
         ]);
+
+        this._selectedButton = 1;
+
+        this._linesPerScreen = 3;
+
+        this._page = 0;
+        this._content = [
+            {
+                title: "Movimentação:",
+                info: [
+                    "Utilize as setas do teclado para se",
+                    "mover, segure espaço para disparar."
+                ]
+            },
+            {
+                title: "Nave:",
+                info: [
+                    "A sua nave possui uma integridade",
+                    "limitada: ao ser atingida por um",
+                    "asteroide, ela sofrerá danos",
+                    "irreversíveis! Quando o medidor de",
+                    "integridade atingir 0, sua pontuação",
+                    "será registrada caso esteja entre as",
+                    "10 melhores."
+                ]
+            },
+            {
+                title: "Asteroides:",
+                info: [
+                    "Asteroides possuem uma resistência",
+                    "proporcional ao seu tamanho. Dispare",
+                    "nos asteroides para fragmentá-los em",
+                    "pedaços menores. Quando asteroides",
+                    "pequenos são atingidos, eles são",
+                    "vaporizados instantaneamente."
+                ]
+            }
+        ];
+    }
+
+    _getTotalPages()
+    {
+        return this._content.reduce( (pgs, c) => pgs + Math.ceil( c.info.length / this._linesPerScreen ), 0 );
+    }
+
+    draw()
+    {
+        super.draw();
+
+        // Dados do conteúdo atual
+        let actualContent = 0;
+        let actualContentFirstPage = 0;
+        let actualContentLastPage = 0;
+
+        // Busca o conteúdo atual
+        this._content.reduce( ( pages, content, contentIndex ) => {
+            
+            // Qual o índice da última página do conteúdo
+            let lastPage = pages + Math.ceil( content.info.length / this._linesPerScreen );
+
+            // Se a página selecionada estiver entre a primeira e última página
+            // do conteúdo, então o conteúdo atual é este.
+            if ( this._page >= pages && this._page <= lastPage )
+            {
+                actualContent = contentIndex;
+                actualContentFirstPage = pages;
+                actualContentLastPage = lastPage;
+            }
+
+            return lastPage;
+
+        }, 0 );
+
+        // Quantidade de páginas do conteúdo atual
+        let actualContentNumPages = actualContentLastPage - actualContentFirstPage;
+        let actualContentPage = this._page - actualContentFirstPage;
+        let content = this._content[ actualContent ];
+
+        // Título do conteúdo
+        Game.render.font = "18px Arial";
+        Game.render.fillStyle = "#FF0"
+        Game.render.fillText( content.title, 30, 96 )
+        
+        // Índice do conteúdo
+        Game.render.textAlign = "end";
+        Game.render.fillText(`(${actualContent+1}/${this._content.length})`, 270, 96);
+        
+        // Índice da página de informações do conteúdo
+        Game.render.font = "14px Arial";
+        Game.render.fillStyle = "#0F0"
+        Game.render.textAlign = "center";
+        Game.render.fillText( `(${actualContentPage+1}/${actualContentNumPages})`, 150, 224 )
+
+        // Desenha as linhas de informação
+        Game.render.font = "14px Arial";
+        Game.render.fillStyle = "#FFF"
+        Game.render.textAlign = "start";
+        for ( let i = 0; i < this._linesPerScreen && ( actualContentPage * this._linesPerScreen + i < content.info.length ) ; i++ )
+        {
+            let contentLines = content.info.length;
+            let lineIndex = Math.min( contentLines - 1, actualContentPage * this._linesPerScreen + i );
+            Game.render.fillText( content.info[ lineIndex ], 30, 128 + 24*i )
+        }
     }
 }
 
