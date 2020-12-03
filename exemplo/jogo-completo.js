@@ -319,12 +319,13 @@ class Collider extends GameObject
 // Botões
 class Button extends GameObject
 {
-    constructor( text, size, x, y, actionCallback = () => {} )
+    constructor( text, size, x, y, actionCallback = () => {}, color = "#FFF" )
     {
         super( x, y );
         this._text = text;
         this._size = size;
         this._actionCallback = actionCallback;
+        this._color = color;
     }
 
     select()
@@ -334,7 +335,7 @@ class Button extends GameObject
 
     draw()
     {
-        Game.render.fillStyle = "#FFF";
+        Game.render.fillStyle = this._color;
         Game.render.font = `${this._size}px Arial`;
         Game.render.fillText( this._text, this.x, this.y );
     }
@@ -366,7 +367,8 @@ class OptionSelect extends GameObject
         this._buttons.forEach( button => button.draw() );
 
         // Botão selecionado
-        Game.render.fillRect( 10, 120 + 32 * this._selectedButton, 8, 8 );
+        let selected = this._buttons[ this._selectedButton ];
+        Game.render.fillRect( selected.x - 18, selected.y - 8, 8, 8 );
     }
 
     // Seleciona as opções
@@ -401,22 +403,19 @@ class Menu extends OptionSelect
                 Game.clear();
                 Game.createObject( new Credits() );
             }),
+
+            // Ao clicar em créditos, vai para a fase dos créditos
+            new Button( "Instruções", 14, 30, 192, () => {
+                Game.clear();
+                Game.createObject( new Credits() );
+            }),
+
+            // Ao clicar em créditos, vai para a fase dos créditos
+            new Button( "Placar", 14, 30, 224, () => {
+                Game.clear();
+                Game.createObject( new Credits() );
+            }),
         ]);
-
-
-        let hs = localStorage.getItem("highscore");
-
-        this.highscore = hs ?? 0;
-    }
-
-    draw()
-    {
-        // Desenha normalmente
-        super.draw();
-
-        // Desenha o link do projeto
-        Game.render.font = "12px Arial";
-        Game.render.fillText( `Melhor pontuação: ${this.highscore}`, 30, 280 );
     }
 }
 
@@ -431,24 +430,17 @@ class Credits extends OptionSelect
                 window.open( "https://github.com/Gaizgrol" );
             }),
 
+            // Link do projeto
+            new Button( "github.com/Gaizgrol/WorkshopJogos", 12, 30, 160, () => {
+                window.open( "https://github.com/Gaizgrol/WorkshopJogos" );
+            }, "#0F0"),
+
             // Ao clicar em voltar, vai para o menu
-            new Button( "< Voltar", 14, 30, 160, () => {
+            new Button( "< Voltar", 14, 30, 224, () => {
                 Game.clear();
                 Game.createObject( new Menu() );
             }),
         ]);
-    }
-
-    draw()
-    {
-        // Desenha normalmente
-        super.draw();
-
-        // Desenha o link do projeto
-        Game.render.font = "12px Arial";
-        Game.render.fillText( "Código fonte:", 30, 260 );
-        Game.render.fillStyle = "#00FF00";
-        Game.render.fillText( "github.com/Gaizgrol/WorkshopJogos", 30, 280 );
     }
 }
 
