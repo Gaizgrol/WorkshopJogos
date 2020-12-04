@@ -634,25 +634,135 @@ class Help extends OptionSelect
 // Créditos do jogos
 class Highscores extends OptionSelect
 {
-    constructor()
+    constructor( score = -1 )
     {
         super( "Placar", 24, [
-            // Desenvolvedor do jogo
-            new Button( "Gabriel Izoton: github.com/Gaizgrol", 14, 30, 128, () => {
-                window.open( "https://github.com/Gaizgrol" );
-            }),
-
-            // Link do projeto
-            new Button( "github.com/Gaizgrol/WorkshopJogos", 12, 30, 160, () => {
-                window.open( "https://github.com/Gaizgrol/WorkshopJogos" );
-            }, "#0F0"),
-
             // Ao clicar em voltar, vai para o menu
-            new Button( "< Voltar", 14, 30, 224, () => {
+            new Button( "< Voltar", 14, 30, 256, () => {
                 Game.clear();
                 Game.createObject( new Menu(3) );
             }),
         ]);
+
+        
+        let scores = localStorage.getItem("highscores");
+
+        // Se não temos placar, geramos um novo
+        if ( !scores )
+        {
+            scores = this._clearScores();
+            localStorage.setItem( "highscores", JSON.stringify(scores) );
+        }
+
+        // Se o placar armazenado tem algum problema de conversão, gera um novo
+        try
+        {
+            scores = JSON.parse( scores );
+        } catch
+        {
+            scores = this._clearScores();
+            localStorage.setItem( "highscores", JSON.stringify(scores) );
+        }
+
+        this._highscores = scores;
+        this._isEditing = false;
+        this._newScore = score;
+        this._scoreAnchorIndex = 0;
+        this._scoresOnScreen = 4;
+
+        // Se recebemos uma pontuação, buscamos a menor pontuação do placar
+        if ( score > 0 )
+        {
+            let min = Infinity;
+            for ( let sc of this._highscores )
+                min = ( sc < min ) ? sc : min;
+    
+            // Ativamos o modo de edição caso a pontuação seja maior que o pior placar
+            if ( score > min )
+                this._isEditing = true;
+        }
+    }
+
+    _clearScores()
+    {
+        let newScore = [];
+        
+        // Gera o nome padrão
+        let defaultName = "";
+        for ( let i = 0; i < 10; i++ )
+            defaultName += '-';
+
+        // Gera o placar padrão
+        for ( let i = 0; i < 10; i++ )
+        {
+            newScore.push({
+                name: defaultName,
+                score: 0
+            });
+        }
+
+        return newScore;
+    }
+
+    step()
+    {
+        // Caso não esteja editando a nova pontuação, navegue pela tabela
+        if ( !this._isEditing )
+        {
+            if ( Game.keyClicked[" "] )
+            {
+                Game.clear();
+                Game.createObject( new Menu(3) );
+            }
+            if ( Game.keyClicked["ArrowUp"] )
+                this._scoreAnchorIndex = Math.max( 0, this._scoreAnchorIndex - 1 );
+            if ( Game.keyClicked["ArrowDown"] )
+                this._scoreAnchorIndex = Math.min( this._highscores.length - this._scoresOnScreen, this._scoreAnchorIndex + 1 );
+        }
+        else
+        {
+        }
+    }
+
+    draw()
+    {
+        super.draw();
+        
+        // Título do conteúdo
+        Game.render.font = "18px Arial";
+        Game.render.fillStyle = "#FF0"
+        Game.render.fillText( "Top 10:", 30, 96 )
+
+        // Barra lateral
+        let barStart = 110;
+        let barSize = 110;
+        
+        Game.render.strokeStyle = "#FFF";
+        Game.render.strokeRect( 256, barStart, 14, barSize );
+        Game.render.fillStyle = "#FFF";
+        Game.render.fillRect( 256, barStart + this._scoreAnchorIndex*(barSize/this._highscores.length), 14, (this._scoresOnScreen/this._highscores.length) * barSize );
+        
+        // Placares
+        for ( let i = 0; i < this._scoresOnScreen; i++ )
+        {
+            Game.render.font = "14px Arial";
+            Game.render.textAlign = "end";
+            Game.render.fillStyle = "#0F0";
+            // Colocação
+            Game.render.fillText( this._scoreAnchorIndex + i + 1, 40, 128 + i*32 );
+            // Pontuação
+            Game.render.fillText( this._highscores[ this._scoreAnchorIndex + i ].score, 224, 128 + i*32 );
+            // Nome
+            Game.render.textAlign = "start";
+            Game.render.fillStyle = "#FFF";
+
+            let name = this._highscores[ this._scoreAnchorIndex + i ].name;
+            for ( let j = 0; j < name.length; j++ )
+            {
+                let letter = name[j];
+                Game.render.fillText( letter, 64 + 8*j, 128 + i*32 );
+            }
+        }
     }
 }
 
