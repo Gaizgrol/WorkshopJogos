@@ -173,6 +173,7 @@ class Game
     // Ativa tecla apertada
     static _handleKeyDown( event )
     {
+        event.preventDefault();
         Game._keyPressed[ event.key ] = true;
     }
 
@@ -664,9 +665,22 @@ class Highscores extends OptionSelect
             localStorage.setItem( "highscores", JSON.stringify(scores) );
         }
 
-        this._highscores = scores;
+        // Pontuações
+        this._highscores = scores.sort( ( a, b ) => b.score - a.score );
+        
+        // Controle da edição do novo nome
         this._isEditing = false;
-        this._newScore = score;
+        this._promptIndex = 0;
+        this._promptShow = true;
+        this._promptMaxTime = 333;
+        this._promptTimer = this._promptMaxTime;
+        
+        // Controle da nova entrada no placar
+        this._newEntryName = this._getDefaultName();
+        this._newEntryScore = score;
+        this._newEntryPlace = 0;
+        
+        // Controle de primeiro placar na tela e quantidade de placares na tela
         this._scoreAnchorIndex = 0;
         this._scoresOnScreen = 4;
 
@@ -674,29 +688,40 @@ class Highscores extends OptionSelect
         if ( score > 0 )
         {
             let min = Infinity;
-            for ( let sc of this._highscores )
-                min = ( sc < min ) ? sc : min;
+            for ( let entry of this._highscores )
+                min = ( entry.score < min ) ? entry.score : min;
     
-            // Ativamos o modo de edição caso a pontuação seja maior que o pior placar
+            // Inserimos a nova pontuação no placar caso a nova pontuação seja maior que a menor pontuação
             if ( score > min )
+            {
                 this._isEditing = true;
+                
+                // Encontra a posição da nova entrada
+                for ( let i = 0; i < this._highscores.length; i++ )
+                    if ( score <= this._highscores[i].score )
+                        this._newEntryPlace = i + 1;
+
+                // 15 10 7 6 6 5
+
+                // Insere nova pontuação na posição nova e remove a última
+                this._highscores.splice( this._newEntryPlace, 0, { name: this._getDefaultName(" "), score } );
+                this._highscores.pop();
+
+                // Move a "câmera" para a nova entrada no placar
+                this._scoreAnchorIndex = Math.min( this._highscores.length - this._scoresOnScreen, this._newEntryPlace );
+            }
         }
     }
 
     _clearScores()
     {
         let newScore = [];
-        
-        // Gera o nome padrão
-        let defaultName = "";
-        for ( let i = 0; i < 10; i++ )
-            defaultName += '-';
 
         // Gera o placar padrão
         for ( let i = 0; i < 10; i++ )
         {
             newScore.push({
-                name: defaultName,
+                name: this._getDefaultName(),
                 score: 0
             });
         }
@@ -704,24 +729,42 @@ class Highscores extends OptionSelect
         return newScore;
     }
 
-    step()
+    _getDefaultName( char = "-" )
     {
-        // Caso não esteja editando a nova pontuação, navegue pela tabela
-        if ( !this._isEditing )
-        {
-            if ( Game.keyClicked[" "] )
-            {
-                Game.clear();
-                Game.createObject( new Menu(3) );
-            }
-            if ( Game.keyClicked["ArrowUp"] )
-                this._scoreAnchorIndex = Math.max( 0, this._scoreAnchorIndex - 1 );
-            if ( Game.keyClicked["ArrowDown"] )
-                this._scoreAnchorIndex = Math.min( this._highscores.length - this._scoresOnScreen, this._scoreAnchorIndex + 1 );
-        }
-        else
-        {
-        }
+        let defaultName = "";
+        for ( let i = 0; i < 10; i++ )
+            defaultName += char;
+        return defaultName;
+    }
+
+    _refreshPrompt()
+    {
+        // Reseta o prompt para o estado visível
+        this._promptTimer = this._promptMaxTime;
+        this._promptShow = true;
+    }
+
+    _seekLeft()
+    {
+        this._promptIndex = Math.max( 0, this._promptIndex - 1 );
+    }
+
+    _seekRight()
+    {
+        this._promptIndex = Math.min( this._newEntryName.length - 1, this._promptIndex + 1 );
+    }
+
+    _setEntryNameChar( char )
+    {
+        // Nome antigo
+        let name = this._highscores[ this._newEntryPlace ].name;
+
+        let newName = name.substring( 0, this._promptIndex );
+        newName += String.fromCharCode( char );
+        newName += name.substring( this._promptIndex + 1 );
+                        
+        // Altera a letra atual para a que foi apertada e pula para a próxima letra
+        this._highscores[ this._newEntryPlace ].name = newName; 
     }
 
     draw()
@@ -752,18 +795,128 @@ class Highscores extends OptionSelect
             Game.render.fillText( this._scoreAnchorIndex + i + 1, 40, 128 + i*32 );
             // Pontuação
             Game.render.fillText( this._highscores[ this._scoreAnchorIndex + i ].score, 224, 128 + i*32 );
+            
             // Nome
             Game.render.textAlign = "start";
-            Game.render.fillStyle = "#FFF";
-
+            
+            let spacing = 12;
             let name = this._highscores[ this._scoreAnchorIndex + i ].name;
             for ( let j = 0; j < name.length; j++ )
             {
+                // Desenha a letra amarela caso esteja editando
+                if ( this._isEditing && this._newEntryPlace == i + this._scoreAnchorIndex && this._promptIndex == j )
+                {
+                    Game.render.fillStyle = "#FF0";
+                    // Desenha o prompt embaixo
+                    if ( this._promptShow )
+                        Game.render.fillRect( 64 + spacing*j - 2, 132 + i*32, spacing - 2, 1 );
+                }
+                // Se não estiver editando ou não estiver selecionada, desenha normalmente
+                else
+                    Game.render.fillStyle = "#FFF";
+                
                 let letter = name[j];
-                Game.render.fillText( letter, 64 + 8*j, 128 + i*32 );
+                Game.render.fillText( letter, 64 + spacing*j, 128 + i*32 );
             }
         }
     }
+    
+    step( deltaTime )
+    {
+        // Caso não esteja editando a nova pontuação, navegue pela tabela
+        if ( !this._isEditing )
+        {
+            if ( Game.keyClicked[" "] )
+            {
+                Game.clear();
+                Game.createObject( new Menu(3) );
+            }
+            if ( Game.keyClicked["ArrowUp"] )
+                this._scoreAnchorIndex = Math.max( 0, this._scoreAnchorIndex - 1 );
+            if ( Game.keyClicked["ArrowDown"] )
+                this._scoreAnchorIndex = Math.min( this._highscores.length - this._scoresOnScreen, this._scoreAnchorIndex + 1 );
+        }
+        else
+        {
+            // Escreve o nome na linha
+
+            // Intervalo de caracteres aceitos
+            let acceptedCharsRanges = [
+                [ "0".charCodeAt(0), "9".charCodeAt(0) ],
+                [ "A".charCodeAt(0), "Z".charCodeAt(0) ],
+                [ "-".charCodeAt(0), "-".charCodeAt(0) ],
+                [ " ".charCodeAt(0), " ".charCodeAt(0) ],
+            ];
+            for ( let key in Game.keyClicked )
+            {
+                // Se a tecla foi apertada e é uma letra/número
+                if ( Game.keyClicked[key] && key.length == 1 )
+                {
+                    // Salva somente as letras em caixa alta
+                    let upKey = key.toUpperCase().charCodeAt(0);
+                    
+                    // Testa se o caracter está na gama de caracteres aceitos
+                    let inAnyRange = false
+
+                    for ( let range of acceptedCharsRanges )
+                    {
+                        if ( upKey >= range[0] && upKey <= range[1] )
+                        {
+                            inAnyRange = true;
+                            break;
+                        }
+                    }
+
+                    if ( inAnyRange )
+                    {
+                        this._refreshPrompt();
+
+                        // Novo nome com a letra substituída
+                        this._setEntryNameChar( upKey );
+
+                        this._seekRight();
+                    }
+                }
+            }
+
+            // Piscada do cursor de texto
+            if ( this._promptTimer <= 0 )
+            {
+                this._promptShow = !this._promptShow;
+                this._promptTimer = this._promptMaxTime;
+            }
+            else
+                this._promptTimer -= deltaTime * 1000;
+
+            // "Apaga" letra atual
+            if ( Game.keyClicked["Backspace"] )
+            {
+                this._refreshPrompt();
+                this._setEntryNameChar(" ");
+                this._seekLeft();
+            }
+
+            // Salva o placar novo
+            if ( Game.keyClicked["Enter"] )
+            {
+                localStorage.setItem( "highscores", JSON.stringify( this._highscores ) );
+                this._isEditing = false;
+            }
+
+            // Anda pra esquerda ou pra direita
+            if ( Game.keyClicked["ArrowLeft"] )
+            {
+                this._refreshPrompt();
+                this._seekLeft();
+            }
+            if ( Game.keyClicked["ArrowRight"] )
+            {
+                this._refreshPrompt()
+                this._seekRight();
+            }
+        }
+    }
+
 }
 
 // =======================================================================
@@ -967,7 +1120,7 @@ class Spaceship extends GameObject
         {
             this._saveScore();
             Game.clear();
-            Game.createObject( new Menu() );
+            Game.createObject( new Highscores( this.score ) );
         }
 
         this._move( deltaTime );
